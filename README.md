@@ -205,19 +205,52 @@ Tecnologias previstas: backend em Python (FastAPI) ou Node.js (consumo de API RE
 
 ## 6. Protótipo da sprint 02
 
-O protótipo implementado nesta sprint materializa a arquitetura definida acima em três partes:
+O protótipo implementado nesta sprint materializa a arquitetura definida acima em três partes executáveis:
 
-- **Backend FastAPI** em `backend/`, com persistência SQLite local, ingestão simulada de sessões por RFID, cálculo de faturas, detecção simples de anomalias e agrupamento de perfis de uso.
-- **Dashboard web do gestor** em `web/`, consumindo a API para exibir unidades, sessões, faturas, anomalias e perfis de uso.
-- **Projeto Expo** em `mobile/`, representando o app do usuário final com seleção de RFID, histórico individual e fatura mensal.
+- **Backend FastAPI** em `backend/`: API REST, SQLite local, dados iniciais automáticos, login fake, ingestão simulada por RFID, faturas, anomalias e perfis de uso.
+- **Dashboard web do gestor** em `web/`: painel administrativo com tela de login, visão de receita, energia, sessões, faturas, alertas e perfis.
+- **Projeto Expo** em `mobile/`: app do morador com login fake, RFID autenticado, histórico individual e fatura mensal.
+
+### Estrutura do projeto
+
+```text
+backend/
+  app/
+    api.py       # Rotas FastAPI e autenticação fake
+    domain.py    # Regras de rateio, anomalia e perfis
+    store.py     # SQLite, seed automático e consultas
+  tests/         # Testes de domínio e API
+web/             # Dashboard web estático do gestor
+mobile/          # Projeto Expo/React Native do morador
+requirements.txt # Dependências Python
+```
 
 ### Autenticação no protótipo
 
-A Sprint 1 trata a autenticação como identificação da sessão de recarga no carregador GoodWe HCA G2. O equipamento pode identificar o usuário por cartão **RFID**, aplicativo SolarGo/SEMS+ ou modo plug and charge. No protótipo, esse conceito foi implementado pelo campo `rfid_tag`: cada usuário demo tem um RFID, e a rota de ingestão simulada usa esse RFID para associar a sessão à unidade e ao veículo correto.
+A Sprint 1 trata a autenticação real como identificação da sessão de recarga no carregador GoodWe HCA G2. O equipamento pode identificar o usuário por cartão **RFID**, aplicativo SolarGo/SEMS+ ou modo plug and charge.
 
-O protótipo ainda não implementa login com senha, OAuth ou controle de sessão de aplicativo. Essa escolha mantém o foco no fluxo principal da Sprint 2: transformar uma sessão autenticada no carregador em registro persistido, fatura individual e análise operacional.
+Na Sprint 2, o protótipo adiciona uma autenticação **de mentirinha** para melhorar a apresentação:
+
+- `POST /auth/login` valida usuários fixos definidos no backend.
+- O retorno contém um `fake-token` e os dados do perfil.
+- O dashboard web usa a conta de gestor.
+- O app Expo usa contas de moradores.
+- Não há hash de senha, expiração de token, OAuth ou segurança real. Isso é proposital para o protótipo.
+
+Credenciais disponíveis:
+
+| Perfil | E-mail | Senha |
+|---|---|---|
+| Gestor web | `admin@goodwe.local` | `chargeops` |
+| Morador | `ana@chargeops.local` | `RFID-101` |
+| Morador | `bruno@chargeops.local` | `RFID-202` |
+| Morador | `carla@chargeops.local` | `RFID-303` |
+
+Os dados iniciais são criados automaticamente quando o banco está vazio. Não é preciso clicar em botão de demonstração nem chamar `/seed` para usar a interface. O endpoint `POST /seed` continua existindo apenas para resetar os dados durante testes ou apresentação.
 
 ### Como rodar o backend
+
+Na raiz do projeto:
 
 ```bash
 python3 -m venv .venv
@@ -226,21 +259,39 @@ pip install -r requirements.txt
 PYTHONPATH=backend uvicorn app.main:app --reload
 ```
 
-Com a API rodando em `http://localhost:8000`, carregue os dados demo:
+Por padrão, a API fica em `http://localhost:8000`. Se essa porta já estiver ocupada, use outra:
 
 ```bash
-curl -X POST http://localhost:8000/seed
+PYTHONPATH=backend uvicorn app.main:app --reload --port 8001
+```
+
+Nesse caso, informe `http://localhost:8001` no campo API do dashboard ou rode o Expo com `EXPO_PUBLIC_API_URL=http://localhost:8001`.
+
+### Como validar a API
+
+Com o backend rodando:
+
+```bash
+curl http://localhost:8000/health
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@goodwe.local","password":"chargeops"}'
+curl http://localhost:8000/invoices/2026-06
 ```
 
 Endpoints principais:
 
-- `GET /health`
-- `POST /seed`
-- `GET /units`
-- `GET /sessions`
-- `POST /sessions/simulate`
-- `GET /invoices/2026-06`
-- `GET /insights`
+| Método | Rota | Função |
+|---|---|---|
+| `GET` | `/health` | Verifica se a API está no ar |
+| `POST` | `/auth/login` | Login fake |
+| `GET` | `/auth/me` | Resolve um fake token |
+| `POST` | `/seed` | Reseta os dados sintéticos |
+| `GET` | `/units` | Lista unidades, usuários e veículos |
+| `GET` | `/sessions` | Lista sessões de recarga |
+| `POST` | `/sessions/simulate` | Insere sessão sintética por RFID |
+| `GET` | `/invoices/2026-06` | Gera faturas do ciclo |
+| `GET` | `/insights` | Retorna anomalias e perfis |
 
 Exemplo de ingestão simulada:
 
@@ -259,17 +310,23 @@ curl -X POST http://localhost:8000/sessions/simulate \
 
 ### Como rodar o dashboard web
 
-Em outro terminal:
+Com o backend ativo, abra outro terminal na raiz do projeto:
 
 ```bash
 python3 -m http.server 5173 -d web
 ```
 
-Acesse `http://localhost:5173`. O campo de API já vem preenchido com `http://localhost:8000`.
+Acesse `http://localhost:5173`.
+
+Use:
+
+- E-mail: `admin@goodwe.local`
+- Senha: `chargeops`
+- API: `http://localhost:8000` ou a porta usada no backend
 
 ### Como rodar o app Expo
 
-Em outro terminal:
+Com o backend ativo, abra outro terminal:
 
 ```bash
 cd mobile
@@ -277,13 +334,31 @@ npm install
 EXPO_PUBLIC_API_URL=http://localhost:8000 npm start
 ```
 
-Se estiver usando um celular físico, substitua `localhost` pelo IP da máquina na mesma rede.
+Use uma das contas de morador:
+
+- `ana@chargeops.local` / `RFID-101`
+- `bruno@chargeops.local` / `RFID-202`
+- `carla@chargeops.local` / `RFID-303`
+
+Se estiver usando um celular físico, substitua `localhost` pelo IP da máquina na mesma rede:
+
+```bash
+EXPO_PUBLIC_API_URL=http://SEU_IP_LOCAL:8000 npm start
+```
 
 ### Como testar
+
+Na raiz do projeto:
 
 ```bash
 . .venv/bin/activate
 PYTHONPATH=backend pytest backend/tests -v
+```
+
+Também é possível checar a sintaxe do backend:
+
+```bash
+python -m compileall backend/app
 ```
 
 ## 7. Fontes consultadas
