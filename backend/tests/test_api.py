@@ -13,6 +13,55 @@ def test_health_returns_service_status(tmp_path):
     assert response.json() == {"status": "ok", "service": "ev-chargeops"}
 
 
+def test_login_returns_fake_manager_session(tmp_path):
+    app = create_app(tmp_path / "test.db")
+    client = TestClient(app)
+
+    response = client.post(
+        "/auth/login",
+        json={"email": "admin@goodwe.local", "password": "chargeops"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["token"] == "fake-token-manager"
+    assert payload["user"]["role"] == "manager"
+    assert payload["user"]["name"] == "Gestor Energy Innovation Lab"
+
+
+def test_login_rejects_invalid_fake_credentials(tmp_path):
+    app = create_app(tmp_path / "test.db")
+    client = TestClient(app)
+
+    response = client.post(
+        "/auth/login",
+        json={"email": "admin@goodwe.local", "password": "errada"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Credenciais invalidas"
+
+
+def test_me_resolves_fake_token(tmp_path):
+    app = create_app(tmp_path / "test.db")
+    client = TestClient(app)
+
+    response = client.get("/auth/me", headers={"Authorization": "Bearer fake-token-user-101"})
+
+    assert response.status_code == 200
+    assert response.json()["user"]["rfid_tag"] == "RFID-101"
+
+
+def test_units_auto_seed_empty_database(tmp_path):
+    app = create_app(tmp_path / "test.db")
+    client = TestClient(app)
+
+    response = client.get("/units")
+
+    assert response.status_code == 200
+    assert len(response.json()["units"]) == 3
+
+
 def test_seed_creates_demo_data_and_invoices(tmp_path):
     app = create_app(tmp_path / "test.db")
     client = TestClient(app)

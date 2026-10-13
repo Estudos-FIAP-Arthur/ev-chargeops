@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -13,6 +13,7 @@ from app.domain import ChargingSession, calculate_invoices, cluster_usage_profil
 from app.store import (
     DEFAULT_DB_PATH,
     connect,
+    ensure_demo_data,
     find_user_by_rfid,
     find_vehicle,
     initialize,
@@ -27,6 +28,55 @@ from app.store import (
 TARIFF_KWH = 1.25
 MAINTENANCE_FEE = 35.0
 
+FAKE_ACCOUNTS = {
+    "admin@goodwe.local": {
+        "password": "chargeops",
+        "token": "fake-token-manager",
+        "user": {
+            "id": "manager-1",
+            "name": "Gestor Energy Innovation Lab",
+            "email": "admin@goodwe.local",
+            "role": "manager",
+        },
+    },
+    "ana@chargeops.local": {
+        "password": "RFID-101",
+        "token": "fake-token-user-101",
+        "user": {
+            "id": "user-101",
+            "name": "Ana Ribeiro",
+            "email": "ana@chargeops.local",
+            "role": "resident",
+            "unit_id": "unit-101",
+            "rfid_tag": "RFID-101",
+        },
+    },
+    "bruno@chargeops.local": {
+        "password": "RFID-202",
+        "token": "fake-token-user-202",
+        "user": {
+            "id": "user-202",
+            "name": "Bruno Lima",
+            "email": "bruno@chargeops.local",
+            "role": "resident",
+            "unit_id": "unit-202",
+            "rfid_tag": "RFID-202",
+        },
+    },
+    "carla@chargeops.local": {
+        "password": "RFID-303",
+        "token": "fake-token-user-303",
+        "user": {
+            "id": "user-303",
+            "name": "Carla Nunes",
+            "email": "carla@chargeops.local",
+            "role": "resident",
+            "unit_id": "unit-303",
+            "rfid_tag": "RFID-303",
+        },
+    },
+}
+
 
 class SimulatedSessionIn(BaseModel):
     rfid_tag: str = Field(min_length=1)
@@ -35,6 +85,11 @@ class SimulatedSessionIn(BaseModel):
     end: datetime
     kwh_delivered: float = Field(gt=0)
     status: str = Field(pattern="^(concluida|interrompida)$")
+
+
+class LoginIn(BaseModel):
+    email: str
+    password: str
 
 
 def create_app(db_path: str | Path = DEFAULT_DB_PATH) -> FastAPI:
@@ -61,9 +116,25 @@ def create_app(db_path: str | Path = DEFAULT_DB_PATH) -> FastAPI:
         with connect(app.state.db_path) as connection:
             return seed_demo(connection)
 
+    @app.post("/auth/login")
+    def login(payload: LoginIn) -> dict[str, object]:
+        account = FAKE_ACCOUNTS.get(payload.email.lower())
+        if account is None or account["password"] != payload.password:
+            raise HTTPException(status_code=401, detail="Credenciais invalidas")
+        return {"token": account["token"], "user": account["user"]}
+
+    @app.get("/auth/me")
+    def me(authorization: str = Header(default="")) -> dict[str, object]:
+        token = authorization.removeprefix("Bearer ").strip()
+        for account in FAKE_ACCOUNTS.values():
+            if account["token"] == token:
+                return {"user": account["user"]}
+        raise HTTPException(status_code=401, detail="Token invalido")
+
     @app.get("/units")
     def units() -> dict[str, list[dict]]:
         with connect(app.state.db_path) as connection:
+            ensure_demo_data(connection)
             return {
                 "units": [_serialize(item) for item in list_units(connection)],
                 "users": [_serialize(item) for item in list_users(connection)],
@@ -73,6 +144,7 @@ def create_app(db_path: str | Path = DEFAULT_DB_PATH) -> FastAPI:
     @app.get("/sessions")
     def sessions() -> dict[str, list[dict]]:
         with connect(app.state.db_path) as connection:
+            ensure_demo_data(connection)
             return {"sessions": [_serialize(item) for item in list_sessions(connection)]}
 
     @app.post("/sessions/simulate", status_code=status.HTTP_201_CREATED)
@@ -102,6 +174,7 @@ def create_app(db_path: str | Path = DEFAULT_DB_PATH) -> FastAPI:
     @app.get("/invoices/{period}")
     def invoices(period: str) -> dict[str, object]:
         with connect(app.state.db_path) as connection:
+            ensure_demo_data(connection)
             invoice_rows = calculate_invoices(
                 list_units(connection),
                 list_sessions(connection),
@@ -114,6 +187,7 @@ def create_app(db_path: str | Path = DEFAULT_DB_PATH) -> FastAPI:
     @app.get("/insights")
     def insights() -> dict[str, object]:
         with connect(app.state.db_path) as connection:
+            ensure_demo_data(connection)
             sessions_rows = list_sessions(connection)
             users_rows = list_users(connection)
             return {

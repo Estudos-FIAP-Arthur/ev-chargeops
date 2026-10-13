@@ -156,6 +156,12 @@ def seed_demo(connection: sqlite3.Connection) -> dict[str, int]:
     return {"units": len(units), "users": len(users), "vehicles": len(vehicles), "sessions": len(sessions)}
 
 
+def ensure_demo_data(connection: sqlite3.Connection) -> None:
+    row = connection.execute("SELECT COUNT(*) AS total FROM units").fetchone()
+    if row["total"] == 0:
+        seed_demo(connection)
+
+
 def list_units(connection: sqlite3.Connection) -> list[Unit]:
     return [Unit(id=row["id"], name=row["name"]) for row in connection.execute("SELECT * FROM units ORDER BY id")]
 
