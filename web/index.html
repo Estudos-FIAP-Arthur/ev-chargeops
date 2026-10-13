@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EV ChargeOps | Gestor</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Sprint 02</p>
+        <h1>EV ChargeOps</h1>
+      </div>
+      <div class="toolbar">
+        <input id="api-url" value="http://localhost:8000" aria-label="URL da API" />
+        <button id="seed-button">Carregar demo</button>
+        <button id="refresh-button">Atualizar</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="summary-grid" aria-label="Resumo operacional">
+        <article class="metric">
+          <span>Unidades</span>
+          <strong id="metric-units">0</strong>
+        </article>
+        <article class="metric">
+          <span>Sessões</span>
+          <strong id="metric-sessions">0</strong>
+        </article>
+        <article class="metric">
+          <span>Energia no ciclo</span>
+          <strong id="metric-energy">0 kWh</strong>
+        </article>
+        <article class="metric attention">
+          <span>Anomalias</span>
+          <strong id="metric-anomalies">0</strong>
+        </article>
+      </section>
+
+      <section class="split">
+        <article class="panel">
+          <div class="panel-title">
+            <h2>Faturas</h2>
+            <span>2026-06</span>
+          </div>
+          <div id="invoices" class="stack"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-title">
+            <h2>Perfis de uso</h2>
+            <span>IA operacional</span>
+          </div>
+          <div id="profiles" class="stack"></div>
+        </article>
+      </section>
+
+      <section class="split wide-left">
+        <article class="panel">
+          <div class="panel-title">
+            <h2>Sessões</h2>
+            <span>RFID, kWh e status</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Início</th>
+                  <th>RFID</th>
+                  <th>Unidade</th>
+                  <th>kWh</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="sessions"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-title">
+            <h2>Anomalias</h2>
+            <span>Alertas</span>
+          </div>
+          <div id="anomalies" class="stack"></div>
+        </article>
+      </section>
+    </main>
+
+    <template id="empty-template">
+      <p class="empty">Nenhum dado carregado.</p>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
