@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -7,32 +7,35 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000";
+const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000";
 const PERIOD = "2026-06";
-const DEMO_RFIDS = ["RFID-101", "RFID-202", "RFID-303"];
 
 export default function App() {
-  const [rfid, setRfid] = useState("RFID-101");
+  const [apiUrl, setApiUrl] = useState(DEFAULT_API_URL);
+  const [email, setEmail] = useState("ana@chargeops.local");
+  const [password, setPassword] = useState("RFID-101");
+  const [auth, setAuth] = useState(null);
   const [payload, setPayload] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  async function signIn() {
     setLoading(true);
     setError("");
     try {
-      await fetch(`${API_URL}/seed`, { method: "POST" });
+      const session = await postJson("/auth/login", { email, password });
+      if (session.user.role !== "resident") {
+        throw new Error("Use uma conta de morador no app mobile.");
+      }
+      setAuth(session);
       const [units, sessions, invoices] = await Promise.all([
-        fetchJson("/units"),
-        fetchJson("/sessions"),
-        fetchJson(`/invoices/${PERIOD}`),
+        fetchJson("/units", session.token),
+        fetchJson("/sessions", session.token),
+        fetchJson(`/invoices/${PERIOD}`, session.token),
       ]);
       setPayload({ ...units, sessions: sessions.sessions, invoices: invoices.invoices });
     } catch (err) {
@@ -42,45 +45,74 @@ export default function App() {
     }
   }
 
+  function signOut() {
+    setAuth(null);
+    setPayload(null);
+    setError("");
+  }
+
   const selected = useMemo(() => {
-    if (!payload) return null;
-    const user = payload.users.find((item) => item.rfid_tag === rfid);
-    const unit = payload.units.find((item) => item.id === user?.unit_id);
-    const invoice = payload.invoices.find((item) => item.unit_id === user?.unit_id);
-    const sessions = payload.sessions.filter((item) => item.rfid_tag === rfid);
+    if (!payload || !auth) return null;
+    const user = auth.user;
+    const unit = payload.units.find((item) => item.id === user.unit_id);
+    const invoice = payload.invoices.find((item) => item.unit_id === user.unit_id);
+    const sessions = payload.sessions.filter((item) => item.rfid_tag === user.rfid_tag);
     return { user, unit, invoice, sessions };
-  }, [payload, rfid]);
+  }, [payload, auth]);
+
+  if (!auth) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <StatusBar style="dark" />
+        <ScrollView contentContainerStyle={styles.loginContent}>
+          <View style={styles.hero}>
+            <Text style={styles.kicker}>EV ChargeOps</Text>
+            <Text style={styles.title}>Acompanhe suas recargas</Text>
+            <Text style={styles.copy}>Histórico, consumo e fatura mensal vinculados ao RFID cadastrado.</Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Entrar</Text>
+            <Field label="E-mail" value={email} onChangeText={setEmail} autoCapitalize="none" />
+            <Field label="Senha" value={password} onChangeText={setPassword} secureTextEntry />
+            <Field label="API" value={apiUrl} onChangeText={setApiUrl} autoCapitalize="none" />
+            <Pressable style={styles.primaryButton} onPress={signIn} disabled={loading}>
+              <Text style={styles.primaryButtonText}>{loading ? "Entrando..." : "Entrar"}</Text>
+            </Pressable>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.kicker}>EV ChargeOps</Text>
-          <Text style={styles.title}>Minha recarga</Text>
-        </View>
-
-        <View style={styles.segmented}>
-          {DEMO_RFIDS.map((item) => (
-            <Pressable
-              key={item}
-              style={[styles.segment, item === rfid && styles.segmentActive]}
-              onPress={() => setRfid(item)}
-            >
-              <Text style={[styles.segmentText, item === rfid && styles.segmentTextActive]}>{item}</Text>
-            </Pressable>
-          ))}
+        <View style={styles.topbar}>
+          <View>
+            <Text style={styles.kicker}>Minha recarga</Text>
+            <Text style={styles.titleSmall}>{selected?.user.name}</Text>
+          </View>
+          <Pressable style={styles.secondaryButton} onPress={signOut}>
+            <Text style={styles.secondaryButtonText}>Sair</Text>
+          </Pressable>
         </View>
 
         {loading && <ActivityIndicator color="#167a5a" size="large" />}
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        {selected?.user ? (
+        {selected ? (
           <>
-            <View style={styles.card}>
-              <Text style={styles.label}>Usuário autenticado por RFID</Text>
-              <Text style={styles.cardTitle}>{selected.user.name}</Text>
-              <Text style={styles.muted}>{selected.unit?.name}</Text>
+            <View style={styles.rfidCard}>
+              <View>
+                <Text style={styles.label}>RFID autenticado</Text>
+                <Text style={styles.rfid}>{selected.user.rfid_tag}</Text>
+              </View>
+              <View style={styles.statusPill}>
+                <Text style={styles.statusPillText}>Ativo</Text>
+              </View>
             </View>
 
             <View style={styles.grid}>
@@ -92,6 +124,12 @@ export default function App() {
                 <Text style={styles.label}>Energia</Text>
                 <Text style={styles.metricValue}>{selected.invoice?.energy_kwh.toFixed(1)} kWh</Text>
               </View>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Unidade</Text>
+              <Text style={styles.cardTitle}>{selected.unit?.name}</Text>
+              <Text style={styles.muted}>{selected.sessions.length} sessões no ciclo 2026-06</Text>
             </View>
 
             <Text style={styles.sectionTitle}>Histórico</Text>
@@ -112,14 +150,37 @@ export default function App() {
       </ScrollView>
     </SafeAreaView>
   );
+
+  async function postJson(path, body) {
+    const response = await fetch(`${apiUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      throw new Error("Credenciais inválidas ou API indisponível.");
+    }
+    return response.json();
+  }
+
+  async function fetchJson(path, token) {
+    const response = await fetch(`${apiUrl}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      throw new Error(`Falha ao carregar ${path}`);
+    }
+    return response.json();
+  }
 }
 
-async function fetchJson(path) {
-  const response = await fetch(`${API_URL}${path}`);
-  if (!response.ok) {
-    throw new Error(`Falha ao carregar ${path}`);
-  }
-  return response.json();
+function Field({ label, ...props }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput style={styles.input} placeholderTextColor="#8b9892" {...props} />
+    </View>
+  );
 }
 
 function formatDate(value) {
@@ -133,73 +194,128 @@ function formatDate(value) {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: "#f5f7f6",
+    backgroundColor: "#eef2f0",
     flex: 1,
+  },
+  loginContent: {
+    gap: 18,
+    padding: 20,
+    paddingTop: 44,
   },
   content: {
     gap: 16,
     padding: 20,
+    paddingTop: 28,
   },
-  header: {
-    gap: 4,
-    paddingTop: 16,
+  hero: {
+    backgroundColor: "#15211c",
+    borderRadius: 18,
+    gap: 10,
+    padding: 24,
   },
   kicker: {
     color: "#167a5a",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
     textTransform: "uppercase",
   },
   title: {
-    color: "#17211d",
-    fontSize: 30,
-    fontWeight: "800",
-  },
-  segmented: {
-    backgroundColor: "#e7eeea",
-    borderRadius: 8,
-    flexDirection: "row",
-    gap: 4,
-    padding: 4,
-  },
-  segment: {
-    alignItems: "center",
-    borderRadius: 6,
-    flex: 1,
-    paddingVertical: 10,
-  },
-  segmentActive: {
-    backgroundColor: "#17211d",
-  },
-  segmentText: {
-    color: "#52635b",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  segmentTextActive: {
     color: "#ffffff",
+    fontSize: 34,
+    fontWeight: "900",
+  },
+  titleSmall: {
+    color: "#17211d",
+    fontSize: 26,
+    fontWeight: "900",
+  },
+  copy: {
+    color: "#cfdad5",
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  topbar: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   card: {
     backgroundColor: "#ffffff",
     borderColor: "#d9e0dc",
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
-    gap: 5,
-    padding: 16,
+    gap: 12,
+    padding: 18,
+  },
+  field: {
+    gap: 7,
+  },
+  input: {
+    backgroundColor: "#f8faf9",
+    borderColor: "#d9e0dc",
+    borderRadius: 9,
+    borderWidth: 1,
+    color: "#17211d",
+    minHeight: 46,
+    paddingHorizontal: 12,
   },
   label: {
     color: "#5d6b64",
     fontSize: 12,
-    fontWeight: "700",
-  },
-  cardTitle: {
-    color: "#17211d",
-    fontSize: 18,
     fontWeight: "800",
   },
-  muted: {
-    color: "#5d6b64",
-    fontSize: 14,
+  primaryButton: {
+    alignItems: "center",
+    backgroundColor: "#17211d",
+    borderRadius: 9,
+    justifyContent: "center",
+    minHeight: 48,
+  },
+  primaryButtonText: {
+    color: "#ffffff",
+    fontWeight: "900",
+  },
+  secondaryButton: {
+    borderColor: "#d9e0dc",
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  secondaryButtonText: {
+    color: "#17211d",
+    fontWeight: "900",
+  },
+  error: {
+    color: "#b42318",
+    fontWeight: "800",
+  },
+  rfidCard: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderColor: "#d9e0dc",
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 18,
+  },
+  rfid: {
+    color: "#17211d",
+    fontSize: 26,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+  statusPill: {
+    backgroundColor: "#e7f4ef",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  statusPillText: {
+    color: "#167a5a",
+    fontSize: 12,
+    fontWeight: "900",
   },
   grid: {
     flexDirection: "row",
@@ -208,7 +324,7 @@ const styles = StyleSheet.create({
   metric: {
     backgroundColor: "#ffffff",
     borderColor: "#d9e0dc",
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flex: 1,
     gap: 8,
@@ -222,35 +338,39 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: "#17211d",
     fontSize: 18,
-    fontWeight: "800",
-    marginTop: 4,
+    fontWeight: "900",
+  },
+  cardTitle: {
+    color: "#17211d",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  muted: {
+    color: "#5d6b64",
+    fontSize: 14,
   },
   session: {
     alignItems: "center",
     backgroundColor: "#ffffff",
     borderColor: "#d9e0dc",
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 14,
+    padding: 16,
   },
   badge: {
-    backgroundColor: "#eef6f2",
+    backgroundColor: "#e7f4ef",
     borderRadius: 999,
     color: "#167a5a",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
     overflow: "hidden",
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   badgeWarn: {
-    backgroundColor: "#fff6e7",
-    color: "#b66a00",
-  },
-  error: {
-    color: "#b42318",
-    fontWeight: "700",
+    backgroundColor: "#fff4df",
+    color: "#a95f00",
   },
 });
