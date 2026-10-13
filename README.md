@@ -203,7 +203,90 @@ A sprint 02 parte da arquitetura e do modelo de dados definidos aqui, priorizand
 
 Tecnologias previstas: backend em Python (FastAPI) ou Node.js (consumo de API REST/HTTPS da GoodWe, ambos adequados), banco de dados relacional (PostgreSQL), bibliotecas de ciência de dados em Python (scikit-learn para detecção de anomalias e clustering), frontend web (React) para o painel do gestor e app mobile em Expo/React Native para o usuário final, mantendo o mesmo backend e a mesma API consumida pelos dois clientes.
 
-## 6. Fontes consultadas
+## 6. Protótipo da sprint 02
+
+O protótipo implementado nesta sprint materializa a arquitetura definida acima em três partes:
+
+- **Backend FastAPI** em `backend/`, com persistência SQLite local, ingestão simulada de sessões por RFID, cálculo de faturas, detecção simples de anomalias e agrupamento de perfis de uso.
+- **Dashboard web do gestor** em `web/`, consumindo a API para exibir unidades, sessões, faturas, anomalias e perfis de uso.
+- **Projeto Expo** em `mobile/`, representando o app do usuário final com seleção de RFID, histórico individual e fatura mensal.
+
+### Autenticação no protótipo
+
+A Sprint 1 trata a autenticação como identificação da sessão de recarga no carregador GoodWe HCA G2. O equipamento pode identificar o usuário por cartão **RFID**, aplicativo SolarGo/SEMS+ ou modo plug and charge. No protótipo, esse conceito foi implementado pelo campo `rfid_tag`: cada usuário demo tem um RFID, e a rota de ingestão simulada usa esse RFID para associar a sessão à unidade e ao veículo correto.
+
+O protótipo ainda não implementa login com senha, OAuth ou controle de sessão de aplicativo. Essa escolha mantém o foco no fluxo principal da Sprint 2: transformar uma sessão autenticada no carregador em registro persistido, fatura individual e análise operacional.
+
+### Como rodar o backend
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+PYTHONPATH=backend uvicorn app.main:app --reload
+```
+
+Com a API rodando em `http://localhost:8000`, carregue os dados demo:
+
+```bash
+curl -X POST http://localhost:8000/seed
+```
+
+Endpoints principais:
+
+- `GET /health`
+- `POST /seed`
+- `GET /units`
+- `GET /sessions`
+- `POST /sessions/simulate`
+- `GET /invoices/2026-06`
+- `GET /insights`
+
+Exemplo de ingestão simulada:
+
+```bash
+curl -X POST http://localhost:8000/sessions/simulate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rfid_tag": "RFID-303",
+    "vehicle_id": "vehicle-303",
+    "start": "2026-06-20T18:00:00-03:00",
+    "end": "2026-06-20T20:00:00-03:00",
+    "kwh_delivered": 12.0,
+    "status": "concluida"
+  }'
+```
+
+### Como rodar o dashboard web
+
+Em outro terminal:
+
+```bash
+python3 -m http.server 5173 -d web
+```
+
+Acesse `http://localhost:5173`. O campo de API já vem preenchido com `http://localhost:8000`.
+
+### Como rodar o app Expo
+
+Em outro terminal:
+
+```bash
+cd mobile
+npm install
+EXPO_PUBLIC_API_URL=http://localhost:8000 npm start
+```
+
+Se estiver usando um celular físico, substitua `localhost` pelo IP da máquina na mesma rede.
+
+### Como testar
+
+```bash
+. .venv/bin/activate
+PYTHONPATH=backend pytest backend/tests -v
+```
+
+## 7. Fontes consultadas
 
 - GoodWe. *API Introduction*. GoodWe Community. Disponível em: https://community.goodwe.com/solution/PV%20System%20Solution/API-introduction
 - GoodWe. *GoodWe API Technical Document*, 2024.
