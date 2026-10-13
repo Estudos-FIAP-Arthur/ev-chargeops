@@ -3,65 +3,127 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EV ChargeOps | Gestor</title>
+    <title>EV ChargeOps | Gestão</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Sprint 02</p>
-        <h1>EV ChargeOps</h1>
-      </div>
-      <div class="toolbar">
-        <input id="api-url" value="http://localhost:8000" aria-label="URL da API" />
-        <button id="seed-button">Carregar demo</button>
-        <button id="refresh-button">Atualizar</button>
-      </div>
-    </header>
-
-    <main>
-      <section class="summary-grid" aria-label="Resumo operacional">
-        <article class="metric">
-          <span>Unidades</span>
-          <strong id="metric-units">0</strong>
-        </article>
-        <article class="metric">
-          <span>Sessões</span>
-          <strong id="metric-sessions">0</strong>
-        </article>
-        <article class="metric">
-          <span>Energia no ciclo</span>
-          <strong id="metric-energy">0 kWh</strong>
-        </article>
-        <article class="metric attention">
-          <span>Anomalias</span>
-          <strong id="metric-anomalies">0</strong>
-        </article>
-      </section>
-
-      <section class="split">
-        <article class="panel">
-          <div class="panel-title">
-            <h2>Faturas</h2>
-            <span>2026-06</span>
+    <section id="login-screen" class="login-screen">
+      <div class="login-shell">
+        <aside class="brand-panel">
+          <p class="eyebrow">Energy Innovation Lab</p>
+          <h1>EV ChargeOps</h1>
+          <p class="brand-copy">Gestão de recarga compartilhada, rateio mensal e análise operacional por RFID.</p>
+          <div class="charger-card">
+            <span class="status-dot"></span>
+            <div>
+              <strong>GoodWe HCA G2</strong>
+              <p>Conectado ao ciclo 2026-06</p>
+            </div>
           </div>
-          <div id="invoices" class="stack"></div>
-        </article>
+        </aside>
 
-        <article class="panel">
-          <div class="panel-title">
-            <h2>Perfis de uso</h2>
-            <span>IA operacional</span>
+        <form id="login-form" class="login-card">
+          <div>
+            <p class="eyebrow">Acesso do gestor</p>
+            <h2>Entrar no painel</h2>
           </div>
-          <div id="profiles" class="stack"></div>
-        </article>
-      </section>
+          <label>
+            E-mail
+            <input id="email" type="email" value="admin@goodwe.local" autocomplete="username" />
+          </label>
+          <label>
+            Senha
+            <input id="password" type="password" value="chargeops" autocomplete="current-password" />
+          </label>
+          <label>
+            API
+            <input id="api-url" value="http://localhost:8000" />
+          </label>
+          <button type="submit">Entrar</button>
+          <p id="login-error" class="form-error" role="alert"></p>
+        </form>
+      </div>
+    </section>
 
-      <section class="split wide-left">
-        <article class="panel">
+    <section id="app-screen" class="app-screen hidden">
+      <aside class="sidebar">
+        <div>
+          <p class="eyebrow">EV ChargeOps</p>
+          <strong>Painel gestor</strong>
+        </div>
+        <nav aria-label="Navegação principal">
+          <a href="#resumo" class="active">Resumo</a>
+          <a href="#faturas">Faturas</a>
+          <a href="#sessoes">Sessões</a>
+          <a href="#ia">IA operacional</a>
+        </nav>
+        <button id="logout-button" class="ghost-button" type="button">Sair</button>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Condomínio Aclimação</p>
+            <h1>Operação de recarga</h1>
+          </div>
+          <div class="operator-card">
+            <span class="status-dot"></span>
+            <div>
+              <strong id="operator-name">Gestor</strong>
+              <p id="operator-role">manager</p>
+            </div>
+          </div>
+        </header>
+
+        <section id="resumo" class="summary-grid" aria-label="Resumo operacional">
+          <article class="metric primary">
+            <span>Receita do ciclo</span>
+            <strong id="metric-revenue">R$ 0,00</strong>
+          </article>
+          <article class="metric">
+            <span>Energia entregue</span>
+            <strong id="metric-energy">0 kWh</strong>
+          </article>
+          <article class="metric">
+            <span>Sessões</span>
+            <strong id="metric-sessions">0</strong>
+          </article>
+          <article class="metric attention">
+            <span>Anomalias</span>
+            <strong id="metric-anomalies">0</strong>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <article id="faturas" class="panel">
+            <div class="panel-title">
+              <div>
+                <p class="eyebrow">Ciclo 2026-06</p>
+                <h2>Faturas por unidade</h2>
+              </div>
+              <button id="refresh-button" type="button">Atualizar</button>
+            </div>
+            <div id="invoices" class="invoice-list"></div>
+          </article>
+
+          <article id="ia" class="panel">
+            <div class="panel-title">
+              <div>
+                <p class="eyebrow">IA operacional</p>
+                <h2>Alertas e perfis</h2>
+              </div>
+            </div>
+            <div id="anomalies" class="stack"></div>
+            <div id="profiles" class="profile-grid"></div>
+          </article>
+        </section>
+
+        <section id="sessoes" class="panel">
           <div class="panel-title">
-            <h2>Sessões</h2>
-            <span>RFID, kWh e status</span>
+            <div>
+              <p class="eyebrow">RFID e medição</p>
+              <h2>Sessões de recarga</h2>
+            </div>
           </div>
           <div class="table-wrap">
             <table>
@@ -69,6 +131,7 @@
                 <tr>
                   <th>Início</th>
                   <th>RFID</th>
+                  <th>Usuário</th>
                   <th>Unidade</th>
                   <th>kWh</th>
                   <th>Status</th>
@@ -77,21 +140,9 @@
               <tbody id="sessions"></tbody>
             </table>
           </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-title">
-            <h2>Anomalias</h2>
-            <span>Alertas</span>
-          </div>
-          <div id="anomalies" class="stack"></div>
-        </article>
-      </section>
-    </main>
-
-    <template id="empty-template">
-      <p class="empty">Nenhum dado carregado.</p>
-    </template>
+        </section>
+      </main>
+    </section>
 
     <script src="./app.js"></script>
   </body>
