@@ -346,6 +346,24 @@ Se estiver usando um celular físico, substitua `localhost` pelo IP da máquina 
 EXPO_PUBLIC_API_URL=http://SEU_IP_LOCAL:8000 npm start
 ```
 
+#### Abrir o app Expo no navegador
+
+O projeto inclui as dependências web do Expo. Na pasta `mobile/`, execute:
+
+```bash
+npm install
+npm run web
+```
+
+Use o endereço informado pelo Expo no terminal. No campo API da tela de login, informe `http://localhost:8000` ou a porta usada pelo backend.
+
+No PowerShell, também é possível definir o endereço antes de iniciar:
+
+```powershell
+$env:EXPO_PUBLIC_API_URL = "http://localhost:8000"
+npm run web
+```
+
 ### Como testar
 
 Na raiz do projeto:
@@ -361,7 +379,65 @@ Também é possível checar a sintaxe do backend:
 python -m compileall backend/app
 ```
 
-## 7. Fontes consultadas
+## 7. Evidências de funcionamento
+
+As capturas abaixo foram feitas em 13/10/2026, com o dashboard web e o app Expo na web conectados ao backend FastAPI e um banco SQLite temporário contendo os dados sintéticos do protótipo. O ciclo demonstrado é junho de 2026. A demonstração usa autenticação simulada e não representa uma conexão com o carregador físico GoodWe.
+
+### Login do gestor
+
+Tela de acesso ao dashboard com as credenciais de demonstração.
+
+![Tela de login do gestor](docs/evidencias/imagens/01-login-gestor.png)
+
+### Resumo operacional
+
+Após o login, o painel apresenta receita do ciclo, energia entregue, quantidade de sessões e anomalias, consultadas na API.
+
+![Resumo operacional com dados carregados da API](docs/evidencias/imagens/02-resumo-operacional.png)
+
+### Faturas por unidade
+
+Visão das faturas do ciclo, com consumo e valores calculados pelo motor de rateio.
+
+![Faturas mensais por unidade](docs/evidencias/imagens/03-faturas.png)
+
+### Sessões de recarga
+
+Histórico de sessões com identificação por RFID, usuário, unidade, energia e status.
+
+![Histórico de sessões de recarga](docs/evidencias/imagens/04-sessoes.png)
+
+### Alertas e perfis de uso
+
+Resultados das regras de detecção de anomalias e classificação dos perfis de uso implementadas no protótipo.
+
+![Alertas e perfis de uso](docs/evidencias/imagens/05-alertas-perfis.png)
+
+### App do morador: login
+
+App Expo executado no navegador em uma janela de 390 × 844 pixels, para apresentar o layout em formato de celular. As capturas demonstram a versão web do app; não foram feitas em um dispositivo Android ou iOS.
+
+<img src="docs/evidencias/imagens/06-app-login.png" alt="Login do morador no app Expo na web" width="390" />
+
+### App do morador: fatura e histórico
+
+Após o login da Ana Ribeiro, o app apresenta o RFID autenticado, a fatura de R$ 234,38, o consumo de 159,5 kWh e o histórico individual de recargas da unidade 101.
+
+<img src="docs/evidencias/imagens/07-app-fatura-historico.png" alt="Fatura, consumo e histórico da Ana no app Expo" width="390" />
+
+### App do morador: unidade sem consumo
+
+A conta da Carla Nunes, vinculada à unidade 303, não possui sessões no ciclo. O app apresenta consumo de 0 kWh e fatura de R$ 35,00, correspondente apenas à taxa fixa de manutenção.
+
+<img src="docs/evidencias/imagens/08-app-sem-consumo.png" alt="Fatura com taxa fixa e histórico vazio da Carla no app Expo" width="390" />
+
+### Vídeo de demonstração do sistema web
+
+[Assistir ou baixar a demonstração do dashboard do gestor](docs/evidencias/videos/dashboard-gestor.mp4).
+
+As evidências do app mobile estão nas capturas de tela acima.
+
+## 8. Fontes consultadas
 
 - GoodWe. *API Introduction*. GoodWe Community. Disponível em: https://community.goodwe.com/solution/PV%20System%20Solution/API-introduction
 - GoodWe. *GoodWe API Technical Document*, 2024.
