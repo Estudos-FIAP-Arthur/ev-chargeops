@@ -76,6 +76,10 @@ h2 {
   display: none !important;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .eyebrow {
   color: var(--green);
   font-size: 12px;

@@ -52,10 +52,10 @@
           <strong>Painel gestor</strong>
         </div>
         <nav aria-label="Navegação principal">
-          <a href="#resumo" class="active">Resumo</a>
-          <a href="#faturas">Faturas</a>
-          <a href="#sessoes">Sessões</a>
-          <a href="#ia">IA operacional</a>
+          <a href="#resumo" class="active" data-view="resumo">Resumo</a>
+          <a href="#faturas" data-view="faturas">Faturas</a>
+          <a href="#sessoes" data-view="sessoes">Sessões</a>
+          <a href="#ia" data-view="ia">IA operacional</a>
         </nav>
         <button id="logout-button" class="ghost-button" type="button">Sair</button>
       </aside>
@@ -75,7 +75,7 @@
           </div>
         </header>
 
-        <section id="resumo" class="summary-grid" aria-label="Resumo operacional">
+        <section id="resumo" class="summary-grid view-section" data-view-section="resumo" aria-label="Resumo operacional">
           <article class="metric primary">
             <span>Receita do ciclo</span>
             <strong id="metric-revenue">R$ 0,00</strong>
@@ -95,7 +95,7 @@
         </section>
 
         <section class="content-grid">
-          <article id="faturas" class="panel">
+          <article id="faturas" class="panel view-section" data-view-section="faturas" hidden>
             <div class="panel-title">
               <div>
                 <p class="eyebrow">Ciclo 2026-06</p>
@@ -106,7 +106,7 @@
             <div id="invoices" class="invoice-list"></div>
           </article>
 
-          <article id="ia" class="panel">
+          <article id="ia" class="panel view-section" data-view-section="ia" hidden>
             <div class="panel-title">
               <div>
                 <p class="eyebrow">IA operacional</p>
@@ -118,7 +118,7 @@
           </article>
         </section>
 
-        <section id="sessoes" class="panel">
+        <section id="sessoes" class="panel view-section" data-view-section="sessoes" hidden>
           <div class="panel-title">
             <div>
               <p class="eyebrow">RFID e medição</p>

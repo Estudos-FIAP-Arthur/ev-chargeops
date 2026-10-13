@@ -17,6 +17,7 @@ const elements = {
   appScreen: document.querySelector("#app-screen"),
   loginForm: document.querySelector("#login-form"),
   loginError: document.querySelector("#login-error"),
+  navLinks: document.querySelectorAll("[data-view]"),
   email: document.querySelector("#email"),
   password: document.querySelector("#password"),
   apiUrl: document.querySelector("#api-url"),
@@ -32,6 +33,7 @@ const elements = {
   profiles: document.querySelector("#profiles"),
   sessions: document.querySelector("#sessions"),
   anomalies: document.querySelector("#anomalies"),
+  viewSections: document.querySelectorAll("[data-view-section]"),
 };
 
 bootstrap();
@@ -67,6 +69,13 @@ elements.logoutButton.addEventListener("click", () => {
 
 elements.refreshButton.addEventListener("click", loadDashboard);
 
+elements.navLinks.forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    showView(link.dataset.view);
+  });
+});
+
 async function bootstrap() {
   const stored = localStorage.getItem(sessionKey);
   if (!stored) return;
@@ -88,6 +97,16 @@ function showApp() {
   elements.appScreen.classList.remove("hidden");
   elements.operatorName.textContent = state.auth.user.name;
   elements.operatorRole.textContent = state.auth.user.role === "manager" ? "Gestor" : "Morador";
+  showView("resumo");
+}
+
+function showView(view) {
+  elements.navLinks.forEach((link) => {
+    link.classList.toggle("active", link.dataset.view === view);
+  });
+  elements.viewSections.forEach((section) => {
+    section.hidden = section.dataset.viewSection !== view;
+  });
 }
 
 async function loadDashboard() {
