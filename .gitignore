@@ -1,0 +1,8 @@
+.pytest_cache/
+.venv/
+__pycache__/
+*.db
+node_modules/
+.expo/
+dist/
+build/
